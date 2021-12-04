@@ -86,14 +86,12 @@ STRINGS."
 (defun part2-loop (lines char-function position)
   ;; if only one line remains - return it
   ;; otherwise: filter lines by next position and make step
-  (format nil "Filtering lines ~a position ~a~%" lines position)
   (cond
     ((> position (length (car lines)))
      (error "position is outside of string length"))
     ((<= (length lines) 1) (car lines))
     (t
      (let ((ch (funcall char-function lines position)))
-       (format nil "Selected character: ~a~%" ch)
        (part2-loop
         (filter-strings lines ch position)
         char-function
@@ -112,3 +110,4 @@ STRINGS."
          (oxygen-value (parse-integer (part2-max-loop lines) :radix 2))
          (co2-value (parse-integer (part2-min-loop lines) :radix 2)))
     (* oxygen-value co2-value)))
+
