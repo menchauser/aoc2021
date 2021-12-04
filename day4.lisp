@@ -78,7 +78,18 @@ board."
     (dolist (n input)
       (nsubst nil n boards)
       (let* ((winner-board (find-winner-board boards)))
-        (format t "Input: ~s, winner board: ~%" n)
-        (print-board winner-board)
         (when winner-board
           (return (calculate-score winner-board n)))))))
+
+(defun part2 (path)
+  (let* ((lines (uiop:read-file-lines path))
+         (input (read-input (car lines)))
+         (boards (read-boards (cdr lines))))
+    (dolist (n input)
+      (nsubst nil n boards)
+      ;; if only one board remains and it is won by input - we stop
+      ;; otherwise: make remove winner boards and continue
+      (if (and (equal (length boards) 1) (wonp (car boards)))
+          (return (calculate-score (car boards) n))
+          (setf boards (delete-if #'wonp boards))))))
+
