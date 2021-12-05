@@ -14,15 +14,6 @@
 (defun read-input (path)
   (mapcar #'parse-line (uiop:read-file-lines path)))
 
-(defun type-of-line (line)
-  "Check if input line in format (X1 Y1 X2 Y2) is HORIZONTAL or VERTICAL. Return
-NIL if neither."
-  (destructuring-bind (x1 y1 x2 y2) line
-    (cond
-      ((equal x1 x2) 'vertical)
-      ((equal y1 y2) 'horizontal)
-      (t nil))))
-
 (defun max-x (input)
   (max
    (reduce #'max (mapcar #'car input))
@@ -32,12 +23,6 @@ NIL if neither."
   (max
    (reduce #'max (mapcar #'cadr input))
    (reduce #'max (mapcar #'cadddr input))))
-
-(defun make-diagram (width height)
-  "Create list of lists of zeros with WIDTH number of cols and HEIGHT number of
-rows (lists)."
-  (loop for j from 1 to height
-        collect (loop for i from 1 to width collect 0)))
 
 ;; we read input
 ;; then find max X and max Y and construct list of lists of 0 of that size
@@ -66,6 +51,50 @@ rows (lists)."
           ;; otherwise we do nothing
           (t (format t "Unsupported: ~d,~d -> ~d,~d~%" x1 x2 y1 y2)))))
     ;; now we count number of points > 1
+    (let ((counter 0))
+      (dotimes (i (array-dimension diagram 0))
+        (dotimes (j (array-dimension diagram 1))
+          (when (> (aref diagram i j) 1)
+            (incf counter))))
+      counter)))
+
+(defun part2 (path)
+  (let* ((input (read-input path))
+         (diagram (make-array (list (1+ (max-y input))
+                                    (1+ (max-x input))))))
+    (format t "Using diagram with size ~d x ~d~%"
+            (array-dimension diagram 1) (array-dimension diagram 0))
+    (dolist (line input)
+      (destructuring-bind (x1 y1 x2 y2) line
+        (cond
+          ;; vertical-line
+          ((equal x1 x2) 
+           (format t "Vertical: ~d,~d -> ~d,~d~%" x1 y1 x2 y2)
+           (when (< y2 y1) (rotatef y1 y2))
+           (loop for y from y1 to y2
+                 do (incf (aref diagram y x1))))
+          ;; horizontal-line
+          ((equal y1 y2)
+           (format t "Horizontal: ~d,~d -> ~d,~d~%" x1 y1 x2 y2)
+           (when (< x2 x1) (rotatef x1 x2))
+           (loop for x from x1 to x2
+                 do (incf (aref diagram y1 x))))
+          ;; otherwise lines are diagonal
+          (t
+           (format t "Diagonal: ~d,~d -> ~d,~d~%" x1 y1 x2 y2)
+           ;; let's at least order by coordinate X and then choose direction by Y
+           (when (< x2 x1)
+             (rotatef x1 x2)
+             (rotatef y1 y2))
+           (if (< y1 y2)
+               ;; first scenario: top-left -> bottom-right
+               (loop for y from y1 to y2
+                     for x from x1 to x2
+                     do (incf (aref diagram y x)))
+               ;; otherwise: bottom-left -> top-right
+               (loop for y from y1 downto y2
+                     for x from x1 to x2
+                     do (incf (aref diagram y x))))))))
     (let ((counter 0))
       (dotimes (i (array-dimension diagram 0))
         (dotimes (j (array-dimension diagram 1))
