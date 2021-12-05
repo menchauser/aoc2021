@@ -13,7 +13,6 @@
          (number-lines
            (mapcar (lambda (l) (read-from-string (bracify l))) board-lines)))
     number-lines))
-    ;; (mapcan #'append number-lines)))
 
 (defun read-boards (lines)
   "Reads list of string board representations into list of boards."
@@ -28,8 +27,8 @@
                (t (error "Unexpected case. Line: ~S" (car lines))))))
     (read-boards-impl lines nil)))           
 
-(defun all-nulls (xs)
-  (not (find-if-not #'null xs)))
+(defmacro all-nulls (xs)
+  `(every #'null ,xs))
 
 (defun won-by-rowsp (board)
   "Check if board has any winner row: all filled with NILs."
@@ -46,8 +45,17 @@
         (when (all-nulls col)
           (return t))))))
 
+(defun won-by-collsp-2 (board max-count)
+  ;;(format t "Max count: ~a, board:~%" max-count)
+  ;;(print-board board)
+  (cond
+    ((equal max-count 0) nil)
+    ((all-nulls (mapcar #'car board)) t)
+    (t (won-by-collsp-2 (mapcar #'cdr board) (1- max-count)))))
+
 (defun wonp (board)
-  (or (won-by-rowsp board) (won-by-collsp board)))
+  (or (won-by-rowsp board)
+      (won-by-collsp board)))
   
 (defun find-winner-board (boards)
   "Check if any board is in winner state and return it. Returns NIL if no such 
