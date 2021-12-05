@@ -44,10 +44,10 @@ rows (lists)."
 ;; than go over all hor and vert lines and INCF fields
 (defun part1 (path)
   (let* ((input (read-input path))
-         (diagram (make-diagram (1+ (max-x input))
-                                (1+ (max-y input)))))
+         (diagram (make-array (list (1+ (max-y input))
+                                    (1+ (max-x input))))))
     (format t "Using diagram with size ~d x ~d~%"
-            (length (car diagram)) (length diagram))
+            (array-dimension diagram 1) (array-dimension diagram 0))
     (dolist (line input)
       (destructuring-bind (x1 y1 x2 y2) line
         (cond
@@ -56,16 +56,19 @@ rows (lists)."
            (format t "Vertical: ~d,~d -> ~d,~d~%" x1 y1 x2 y2)
            (when (< y2 y1) (rotatef y1 y2))
            (loop for y from y1 to y2
-                 do (incf (elt (elt diagram y) x1))))
+                 do (incf (aref diagram y x1))))
           ;; horizontal-line
           ((equal y1 y2)
            (format t "Horizontal: ~d,~d -> ~d,~d~%" x1 y1 x2 y2)
            (when (< x2 x1) (rotatef x1 x2))
            (loop for x from x1 to x2
-                 do (incf (elt (elt diagram y1) x))))
+                 do (incf (aref diagram y1 x))))
           ;; otherwise we do nothing
           (t (format t "Unsupported: ~d,~d -> ~d,~d~%" x1 x2 y1 y2)))))
     ;; now we count number of points > 1
-    (reduce #'+
-            (mapcar (lambda (row) (count-if (lambda (x) (> x 1)) row))
-                    diagram))))
+    (let ((counter 0))
+      (dotimes (i (array-dimension diagram 0))
+        (dotimes (j (array-dimension diagram 1))
+          (when (> (aref diagram i j) 1)
+            (incf counter))))
+      counter)))
