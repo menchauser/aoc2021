@@ -31,57 +31,45 @@
   (let* ((input (read-input path))
          (diagram (make-array (list (1+ (max-y input))
                                     (1+ (max-x input))))))
-    (format t "Using diagram with size ~d x ~d~%"
-            (array-dimension diagram 1) (array-dimension diagram 0))
     (dolist (line input)
       (destructuring-bind (x1 y1 x2 y2) line
         (cond
           ;; vertical-line
           ((equal x1 x2) 
-           (format t "Vertical: ~d,~d -> ~d,~d~%" x1 y1 x2 y2)
            (when (< y2 y1) (rotatef y1 y2))
            (loop for y from y1 to y2
                  do (incf (aref diagram y x1))))
           ;; horizontal-line
           ((equal y1 y2)
-           (format t "Horizontal: ~d,~d -> ~d,~d~%" x1 y1 x2 y2)
            (when (< x2 x1) (rotatef x1 x2))
            (loop for x from x1 to x2
                  do (incf (aref diagram y1 x))))
           ;; otherwise we do nothing
-          (t (format t "Unsupported: ~d,~d -> ~d,~d~%" x1 x2 y1 y2)))))
+          (t nil))))
     ;; now we count number of points > 1
-    (let ((counter 0))
-      (dotimes (i (array-dimension diagram 0))
-        (dotimes (j (array-dimension diagram 1))
-          (when (> (aref diagram i j) 1)
-            (incf counter))))
-      counter)))
+    (loop for i from 0 below (array-dimension diagram 0) sum
+      (loop for j from 0 below (array-dimension diagram 1)
+            count (> (aref diagram i j) 1)))))
 
 (defun part2 (path)
   (let* ((input (read-input path))
          (diagram (make-array (list (1+ (max-y input))
                                     (1+ (max-x input))))))
-    (format t "Using diagram with size ~d x ~d~%"
-            (array-dimension diagram 1) (array-dimension diagram 0))
     (dolist (line input)
       (destructuring-bind (x1 y1 x2 y2) line
         (cond
           ;; vertical-line
           ((equal x1 x2) 
-           (format t "Vertical: ~d,~d -> ~d,~d~%" x1 y1 x2 y2)
            (when (< y2 y1) (rotatef y1 y2))
            (loop for y from y1 to y2
                  do (incf (aref diagram y x1))))
           ;; horizontal-line
           ((equal y1 y2)
-           (format t "Horizontal: ~d,~d -> ~d,~d~%" x1 y1 x2 y2)
            (when (< x2 x1) (rotatef x1 x2))
            (loop for x from x1 to x2
                  do (incf (aref diagram y1 x))))
           ;; otherwise lines are diagonal
           (t
-           (format t "Diagonal: ~d,~d -> ~d,~d~%" x1 y1 x2 y2)
            ;; let's at least order by coordinate X and then choose direction by Y
            (when (< x2 x1)
              (rotatef x1 x2)
@@ -95,9 +83,6 @@
                (loop for y from y1 downto y2
                      for x from x1 to x2
                      do (incf (aref diagram y x))))))))
-    (let ((counter 0))
-      (dotimes (i (array-dimension diagram 0))
-        (dotimes (j (array-dimension diagram 1))
-          (when (> (aref diagram i j) 1)
-            (incf counter))))
-      counter)))
+    (loop for i from 0 below (array-dimension diagram 0) sum
+      (loop for j from 0 below (array-dimension diagram 1)
+            count (> (aref diagram i j) 1)))))
