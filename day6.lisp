@@ -19,11 +19,22 @@ new 8."
       (setf current-fish (run-day current-fish)))
     (length current-fish)))
 
+(defun fish-loop-opt (days fish-list)
+  ;; so we need to calculate first 9 sequence numbers manually
+  (let ((seq (reverse (loop for days from 0 to 9 collect (fish-loop days fish-list)))))
+    ;; and then we can calculate by fibonacci with steps -7, -9
+    ;; starting from list-end: next element -
+    (format t "initial sequence: ~a~%" seq)
+    (dotimes (i (- days 9))
+      (let* ((next (+ (elt seq 6) (elt seq 8))))
+        (setf seq (cons next seq))))
+    (car seq)))
+
 (defun read-numbers (s)
   (read-from-string (concatenate 'string "(" (substitute #\Space #\, s) ")")))
 
-(defun part1 (days path)
+(defun solution (days path)
   (let* ((input (uiop:read-file-line path))
          (fish-list (read-numbers input)))
-    (fish-loop days fish-list)))
+    (fish-loop-opt days fish-list)))
     
