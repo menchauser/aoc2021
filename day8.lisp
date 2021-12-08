@@ -1,0 +1,15 @@
+(defun split-by-space (s)
+  (loop for i = 0 then (1+ j)
+        as j = (position #\Space s :start i)
+        collect (subseq s i j)
+        while j))
+
+(defun part1 (path)
+  (let* ((lines (uiop:read-file-lines path)))
+    (loop for line in lines
+          for output-pos = (+ 2 (position #\| line))
+          for output-value = (subseq line output-pos)
+          for digits = (split-by-space output-value)
+          for digit-lengths = (mapcar #'length digits)
+          for count = (length (intersection digit-lengths '(2 4 3 7)))
+          sum count)))
