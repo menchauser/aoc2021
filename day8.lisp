@@ -14,69 +14,46 @@
           for count = (length (intersection digit-lengths '(2 4 3 7)))
           sum count)))
 
-(defparameter test-line "acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab |
-cdfeb fcadb cdfeb cdbaf")
-
-
-(defun process-line (line)
-  "We get line with patterns, #\| delimiter, and digits. Then do something about
-it."
-  (let* ((delimiter-pos (position #\| line))
-         (patterns (split-by-space (subseq line 0 (1- delimiter-pos))))
-         (pattern-lengths (mapcar (lambda (p) (cons (coerce p 'list) (length p))) patterns)))
-    ;; let us find "a" substitution
-    (let* ((digit-1 (car (rassoc 2 pattern-lengths)))
-           (digit-4 (car (rassoc 4 pattern-lengths)))
-           (digit-7 (car (rassoc 3 pattern-lengths)))
-           (digit-8 (car (rassoc 7 pattern-lengths)))
-           (segment-a (set-difference digit-7 digit-1))
-           (segments-bd (set-difference digit-4 digit-1))
-           (segments-aeg (set-difference digit-8 digit-4))
-           (segments-eg (set-difference segments-aeg segment-a)))
-      (format t "1 = ~a~%4 = ~a~%7 = ~a~%8 = ~a~%"
-              digit-1 digit-4 digit-7 digit-8)
-      (format t "segment a: ~a~%" segment-a)
-      (format t "segments [bd]: ~a~%" segments-bd)
-      (format t "segments [aeg]: ~a~%" segments-aeg)
-      (format t "segments [eg]: ~a~%" segments-eg)
-      )))
-
 (defun to-chars (s) (coerce s 'list))
+(defun to-chars-transformer (stream subchar arg)
+  (declare (ignore subchar) (ignore arg))
+  (let* ((s (read stream t)))
+    `(to-chars ,s)))
+(set-dispatch-macro-character #\# #\d #'to-chars-transformer)
 
-(defparameter original-digits
+(defparameter *original-digits*
   (list
-   (cons 0 (to-chars "abcefg"))
-   (cons 1 (to-chars "cf"))
-   (cons 2 (to-chars "acdeg"))
-   (cons 3 (to-chars "acdfg"))
-   (cons 4 (to-chars "bcdf"))
-   (cons 5 (to-chars "abdfg"))
-   (cons 6 (to-chars "abdefg"))
-   (cons 7 (to-chars "acf"))
-   (cons 8 (to-chars "abcdefg"))
-   (cons 9 (to-chars "abcdfg"))))
+   (cons 0 #d"abcefg")
+   (cons 1 #d"cf")
+   (cons 2 #d"acdeg")
+   (cons 3 #d"acdfg")
+   (cons 4 #d"bcdf")
+   (cons 5 #d"abdfg")
+   (cons 6 #d"abdefg")
+   (cons 7 #d"acf")
+   (cons 8 #d"abcdefg")
+   (cons 9 #d"abcdfg")))
 
 (defun set-equal (list1 list2)
   (and (= (length list1) (length list2))
-       (every (lambda (x) (member x list2)) list1)
-       (every (lambda (x) (member x list1)) list2)))
+       (every (lambda (x) (member x list2 :test #'equal)) list1)
+       (every (lambda (x) (member x list1 :test #'equal)) list2)))
 
 (defun remap (digit segment-mappings)
   (mapcar
    (lambda (c) (cdr (assoc c segment-mappings)))
    digit))
 
-(defun valid-permutation (segment-mappings digits)
-  "Segment mappings: alist of original-segment . target-segment.
-Digits: alist of number . pattern.
-Example: (validate-permutation '((d . a) (e . b) ...) '((1 . (a b)))"
-  ;; we remap digit according to segment mappings and compare it with original)
-  ;;(format t "Segment mappings: ~a~%Digits: ~a~%" segment-mappings digits)
-  (loop for (num . digit) in digits
-        always (set-equal (cdr (assoc num original-digits))
-                          (remap digit segment-mappings))))
+(defun mapping-fits-p (mapping patterns)
+  ;; we check that if we remap every pattern according to mapping - we will get
+  ;; 10 original digits
+  (let* ((remapped (mapcar
+                    (lambda (p) (sort (remap p mapping) #'char<))
+                    patterns))
+         (orig-digits (mapcar #'cdr *original-digits*)))
+    (set-equal orig-digits remapped)))
 
-(defparameter segments (to-chars "abcdefg"))
+(defparameter *original-segments* #d"abcdefg")
 
 (defun permutations (xs)
   (cond ((null xs) nil)
@@ -85,60 +62,30 @@ Example: (validate-permutation '((d . a) (e . b) ...) '((1 . (a b)))"
                  append (mapcar (lambda (l) (cons x l))
                                 (permutations (remove x xs)))))))
 
-(defun zip-alist (list1 list2)
-  (mapcar #'cons list1 list2))
-
-(defun remove-from (list &rest items)
-  (let ((result (copy-list list)))
-    (dolist (i items)
-      (setf result (delete i result :test #'equal)))
-    result))
-
-(defun find-3 (patterns digit-1)
-  (find-if
-   (lambda (p) (= 3 (length (set-difference p digit-1))))
-   patterns))
-
-(defun find-mapping (string-patterns)
-  (let* ((patterns (mapcar (lambda (p) (to-chars p))
-                           (split-by-space string-patterns)))
-         (digit-1 (find-if (lambda (p) (= 2 (length p))) patterns))
-         (digit-4 (find-if (lambda (p) (= 4 (length p))) patterns))
-         (digit-7 (find-if (lambda (p) (= 3 (length p))) patterns))
-         (digit-8 (find-if (lambda (p) (= 7 (length p))) patterns))
-         (rem-patterns (remove-from patterns digit-1 digit-4 digit-7 digit-8))
-         (digit-3 (find-3 rem-patterns digit-1))
-         (mappings (remove (to-chars "abcdefg")
-                           (permutations (to-chars "abcdefg"))
-                           :test #'equal))
-         (digits (mapcar #'cons '(1 3 4 7 8)
-                         (list digit-1 digit-3 digit-4 digit-7 digit-8))))
-    (format t "1 = ~a~%3 = ~a~%4 = ~a~%7 = ~a~%8 = ~a~%"
-            digit-1 digit-3 digit-4 digit-7 digit-8)
-    ;; (format t "remaining patterns: ~a~%" rem-patterns)
-    (loop for mapping in mappings
-          when (valid-permutation (mapcar #'cons mapping segments) digits)
+(defun find-mapping (digit-strings)
+  "DIGIT-STRINGS is a list of 10 strings each one encoding a digit."
+  (let* ((patterns (mapcar #'to-chars digit-strings))
+         (permuted-segments (permutations *original-segments*)))
+    ;; now for each mappings lets check if it fits
+    (loop for permutation in permuted-segments
+          for mapping = (mapcar #'cons permutation *original-segments*)
+          when (mapping-fits-p mapping patterns)
             do (return mapping))))
 
-(defun split-by-delimiter (line delim)
-  (let* ((delim-pos (position delim line)))
-    (cons
-     (subseq line 0 delim-pos)
-     (subseq line (1+ delim-pos)))))
-
 (defun decode (digit mapping)
-  (let* ((mlist (mapcar #'cons mapping (to-chars "abcdefg")))
-         (digit-segments 
-           (sort (mapcar (lambda (c) (cdr (assoc c mlist))) digit) #'char<)))
+  (let* ((digit-segments 
+           (sort (mapcar (lambda (c) (cdr (assoc c mapping))) digit) #'char<)))
     (car (rassoc digit-segments original-digits :test #'equal))))
-
-(defun part1 (path)
+  
+(defun part2 (path)
   (let* ((lines (uiop:read-file-lines path)))
-    (dolist (line lines)
+    (loop
+      for line in lines
+      sum
       (let* ((delim-pos (position #\| line))
-             (string-patterns (subseq line 0 (1- delim-pos)))
-             (string-digits (split-by-space (subseq line (+ 2 delim-pos))))
-             (mapping (find-mapping string-patterns)))
-        (dolist (d string-digits)
-          (format t "~a = ~a~%" d (decode (to-chars d) mapping)))))))
-             
+             (input-strings (split-by-space (subseq line 0 (1- delim-pos))))
+             (output-strings (split-by-space (subseq line (+ 2 delim-pos))))
+             (mapping (find-mapping input-strings)))
+        (format t "Found mapping: ~a~%" mapping)
+        (let ((digits (mapcar (lambda (x) (decode (to-chars x) mapping)) output-strings)))
+          (reduce (lambda (x y) (+ (* x 10) y)) digits))))))
