@@ -18,8 +18,7 @@
 
 (defun solution (path)
   (let ((lines (uiop:read-file-lines path))
-        (complete-scores nil)
-        (total-corrupt-score 0))
+        (complete-scores nil))
     (loop
       for line in lines
       for stack = nil
