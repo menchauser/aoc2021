@@ -30,13 +30,11 @@
       for col = (cdr flash-coords)
       do (progn 
            ;; we found next flash position
-           ;; from it we increase energy level for adjacent octopuses
-           ;; (format t "Found flash position: ~a ~a~%" row col)
+           ;; from it we increase energy level for adjacent positions
+           ;; we increase energy for flash position but later we will reset it to -1
            (loop for i from (max (1- row) 0) to (min (1+ row) (1- rows)) do
              (loop for j from (max (1- col) 0) to (min (1+ col) (1- cols))
-                   when (and
-                         (not (equal (cons i j) flash-coords))
-                         (>= (aref grid i j) 0))
+                   when (>= (aref grid i j) 0)
                      do (incf (aref grid i j))))
            ;; after we flash adjacent positions: we set flashed octopus to -1
            (setf (aref grid row col) -1)))
