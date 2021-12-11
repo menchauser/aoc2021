@@ -71,3 +71,12 @@
              (when all-flashed
                (format t "All octopuses flashed on step ~a~%" n)
                (return)))))))
+
+(defun print-grid (grid)
+  (loop for i from 1 below (array-dimension grid 0) do
+    (loop for j from 1 below (array-dimension grid 1) do
+      (let ((x (aref grid i j)))
+        (if (= x 0)
+            (format t "~c[1m0~c[0m" #\ESC #\ESC)
+            (format t "~c[2m~a~c[0m" #\ESC x #\ESC)))
+      finally (format t "~%"))))
