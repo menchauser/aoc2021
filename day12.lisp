@@ -41,34 +41,6 @@
      (visited c (remove extra-cave current-path :test #'equal :count 1)))
    candidates))
 
-(defun count-paths (map
-                    current-path
-                    finished-paths
-                    &optional (extra-cave nil))
-  "This function counts how many paths are available through the MAP when
-CURRENT-PATH already walked. CURRENT-PATH is a list which head is last visited
-cave. MAP is an alist which describes cave system. EXTRA-CAVE determines which
-cave could be visited twice."
-  (if (equal "end" (car current-path))
-      (if (member current-path finished-paths :test #'equal)
-          (progn
-            (format t " | already traced~%")
-            0)
-          (progn
-            (print-path current-path)
-            (format t " | finished~%")
-            (push current-path finished-paths)
-            1))
-      (let* ((candidates (connections map (car current-path)))
-             (next-caves (select-caves candidates current-path extra-cave)))
-        (if (null next-caves)
-            (progn
-              ;; (print-path current-path)
-              ;; (format t " | dead end~%")
-              0)
-            (loop for cave in next-caves
-                  sum (count-paths map (cons cave current-path) finished-paths extra-cave))))))
-
 (defun collect-paths (map
                       current-path
                       finished-paths
