@@ -25,17 +25,14 @@
    :test #'equal))
 
 (defun smallp (cave)
-  (and (lower-case-p (char cave 0))
-       cave))
+  (lower-case-p (char cave 0)))
 
 (defun visited (cave visited-path)
   (and (smallp cave)
        (member cave visited-path :test #'equal)))
 
 (defun select-caves (candidates current-path extra-cave)
-  ;; visited caves may contain only one element
-  ;; if we already have visited cave: check that current != visited
-  ;; otherwise: check by usual means
+  ;; if we have visited extra-cave: don't check it first time
   (remove-if
    (lambda (c) 
      (visited c (remove extra-cave current-path :test #'equal :count 1)))
@@ -49,31 +46,19 @@
 CURRENT-PATH already walked. CURRENT-PATH is a list which head is last visited
 cave. MAP is an alist which describes cave system. EXTRA-CAVE determines which
 cave could be visited twice."
-  ;;(format t "run~%")
   (if (equal "end" (car current-path))
       (if (member current-path finished-paths :test #'equal)
-          (progn
-            ;; (format t " | already traced~%")
-            nil)
-          (progn
-            ;;(print-path current-path)
-            ;;(format t " | finished~%")
-            (list current-path)))
+          nil
+          (list current-path))
       (let* ((candidates (connections map (car current-path)))
              (next-caves (select-caves candidates current-path extra-cave)))
-        ;;(format t "candidates: ~a~%selected: ~a~%" candidates next-caves)
         (if (null next-caves)
-            (progn
-              ;; (print-path current-path)
-              ;; (format t " | dead end~%")
-              nil)
-            (progn
-             ;; (print-path current-path)
+            nil
             (loop for cave in next-caves
                   append (collect-paths map
                                         (cons cave current-path)
                                         finished-paths
-                                        extra-cave)))))))
+                                        extra-cave))))))
 
 (defun part1 (input)
   (let ((map (to-map (read-input input))))
