@@ -47,9 +47,10 @@ CURRENT-PATH already walked. CURRENT-PATH is a list which head is last visited
 cave. MAP is an alist which describes cave system. EXTRA-CAVE determines which
 cave could be visited twice."
   (if (equal "end" (car current-path))
-      (if (member current-path finished-paths :test #'equal)
-          nil
-          (list current-path))
+      (list current-path)
+      ;; (if (member current-path finished-paths :test #'equal)
+          ;;nil
+      ;;(list current-path))
       (let* ((candidates (connections map (car current-path)))
              (next-caves (select-caves candidates current-path extra-cave)))
         (if (null next-caves)
@@ -70,11 +71,14 @@ cave could be visited twice."
          (finished-paths nil))
     (format t "extra caves: ~a~%" small-caves)
     (loop for extra-cave in (cons nil small-caves)
-          for next-paths = (collect-paths map '("start")
-                                          finished-paths
-                                          extra-cave)
-          sum (length next-paths) into total-count
-          do (progn
-               (format t "finished for extra cave: ~a~%" extra-cave)
-               (setf finished-paths (append finished-paths next-paths)))
-          finally (return total-count))))
+          append (collect-paths map '("start")
+                                finished-paths
+                                extra-cave)
+          into result 
+          do (format t "finished for extra cave: ~a~%" extra-cave)
+          finally (return
+                    (let ((hashresult (make-hash-table :test #'equal)))
+                      (loop for x in result
+                            do (setf (gethash x hashresult) t)
+                            finally (return (hash-table-size hashresult))))))))
+                          
