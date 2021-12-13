@@ -21,12 +21,22 @@
       (values-list (list coords instructions)))))
 
 (defun print-sheet (coords)
-  ;; find max coord
-  (loop for c in coords
-        maximize (car c) into max-x
-        maximize (cdr c) into max-y
-        finally 
-           (format t "Max x: ~a, y: ~a~%" max-x max-y))) ;; TODO
+  (loop
+    for c in coords
+    maximize (car c) into max-x
+    maximize (cdr c) into max-y
+    finally 
+       ;; now we prepare array and print it
+       (let ((plane (make-array (list (1+ max-y) (1+ max-x))
+                                :initial-element ".")))
+         (loop for (x . y) in coords
+               do (setf (aref plane y x) "#")
+               finally
+                  (loop for i from 0 below (array-dimension plane 0) do
+                    (loop for j from 0 below (array-dimension plane 1) do
+                      (format t "~a" (aref plane i j)))
+                    (format t "~%"))))))
+                  (format t "~a~%" plane)))))
 
 (defun fold (input-dots inst)
   "Fold DOTS according to given INSTruction. Returns new dots."
@@ -59,3 +69,10 @@
   (multiple-value-bind (dots instructions)
       (read-input path)
     (length (fold dots (car instructions)))))
+
+(defun part2 (path)
+  (multiple-value-bind (dots instructions)
+      (read-input path)
+    (loop for inst in instructions
+          do (setf dots (fold dots inst))
+          finally (print-sheet dots))))
