@@ -18,7 +18,7 @@
                                  (val (read-from-string line t nil
                                                         :start (+ pos 2))))
                             (cons coord val)))))
-      (values-list (list coords instructions)))))
+      (values coords instructions))))
 
 (defun print-sheet (coords)
   (loop
@@ -60,8 +60,7 @@
        (loop for dot in dots
              for y = (cdr dot)
              when (> y val)
-               do
-                  (setf (cdr dot)
+               do (setf (cdr dot)
                         (- val (- y val)))
              finally (return (remove-duplicates dots :test #'equal)))))))
 
