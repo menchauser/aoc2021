@@ -12,27 +12,27 @@
     ;; we start at bottom-right position and go top-left until 1-1
     (loop with max-row = (1- (array-dimension test15 0))
           with max-col = (1- (array-dimension test15 1))
-          with row = max-row
-          with col = max-col
+          with row = 0
+          with col = 0
           with risk = (aref cave row col)
           do (progn
                (cond
-                 ((and (= row 0) (= col 0)) (return risk))
+                 ((and (= row max-row) (= col max-col)) (return risk))
                  ;; if we hit top or left line: just move along it
-                 ((= row 0)
-                  (decf col)
+                 ((= row max-row)
+                  (incf col)
                   (format t "(hor) next step: ~a, ~a; delta: ~a~%"
                           row col (aref cave row col))
                   (incf risk (aref cave row col)))
-                 ((= col 0)
-                  (decf row)
+                 ((= col max-col)
+                  (incf row)
                   (format t "(ver) next step: ~a, ~a; delta: ~a~%"
                           row col (aref cave row col))
                   (incf risk (aref cave row col)))
                  ;; otherwise: select cell with minimal risk
-                 (t (if (< (aref cave row (1- col)) (aref cave (1- row) col))
-                        (decf col)
-                        (decf row))
+                 (t (if (< (aref cave row (1+ col)) (aref cave (1+ row) col))
+                        (incf col)
+                        (incf row))
                     (format t "next step: ~a, ~a; delta: ~a~%"
                             row col (aref cave row col))
                     (incf risk (aref cave row col)))))
