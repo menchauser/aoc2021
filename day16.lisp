@@ -1,3 +1,9 @@
+(defparameter +debug+ t)
+
+(defmacro info (control-string &rest args)
+  `(when +debug+
+     (format t ,control-string ,@args)))
+
 (defun to-binary (hex-str)
   (loop for c across hex-str
         collect (format nil "~4,'0b" (parse-integer (string c) :radix 16))
@@ -13,37 +19,25 @@
 (defstruct op
   version type length-type length subpackets)
 
-(defun read-literal-value (bits &key start (finalize nil))
+(defun read-literal-value (bits &key start)
   "START position is set to the beginning of first group of literal bits. 
-FINALIZE demands to consume zeroes after the final group. Returns literal value 
-and position after the end."
-  ;;(format t "~a~%" bits)
-  ;;(format t "~v@{~a~:*~}" start #\Space)
+Returns literal value and position after the end."
   (loop with tag = #\A
         with value = 0
         with pos = start
         for group-bit = (bin (subseq bits pos (1+ pos)))
         for group = (subseq bits (1+ pos) (+ 5 pos))
-        do ;; (format t "~v@{~a~:*~}" 5 tag)
+        do (info "~v@{~a~:*~}" 5 tag)
            (setf value (+ (* value 16) (bin group))
                  pos (+ pos 5)
                  tag (code-char (1+ (char-code tag))))
         if (= 0 group-bit)
-          ;; (- pos start) should be divisible by 4
-          ;; count final zeroes to add to pos
-          return (if finalize 
-                     (let ((pos-mod (mod pos 4)))
-                       (case pos-mod
-                         (0 (values value pos))
-                         (otherwise (loop repeat (- 4 pos-mod)
-                                          do (format t "-")
-                                             (incf pos)
-                                          finally (return (values value pos))))))
-                     (values value pos))))
+          return (values value pos)))
   
-(defun read-packet (bits &key (start 0))
-  ;; (format t "~&~a~%" (subseq bits start))
-  ;; (format t "VVVTTT")
+(defun read-packet (bits &key (start 0) (print-packet nil))
+  (when print-packet
+    (info "~&~a~%" bits))
+  (info "VVVTTT")
   (let ((version (bin (subseq bits start (+ start 3))))
         (type (bin (subseq bits (+ start 3) (+ start 6)))))
     (case type
@@ -54,14 +48,12 @@ and position after the end."
                  pos)))
       (otherwise
        (let ((length-type (bin (subseq bits (+ start 6) (+ start 7)))))
-         ;; (format t "I")
+         (info "I")
          (case length-type
            ;; next 15 bits - total length
            (0
-            ;; (format t "~v@{~a~:*~}" 15 "L")
+            (info "~v@{~a~:*~}" 15 "L")
             (let ((total-length (bin (subseq bits (+ start 7) (+ start 7 15)))))
-              ;; (format t "~&start position: ~a, end:~a~%"
-              ;;         (+ start 7 15) (+ start 7 15 total-length))
               (loop with pos = (+ start 7 15)
                     while (< pos (+ start 7 15 total-length))
                     for (subpacket next-pos) = (multiple-value-list
@@ -77,7 +69,7 @@ and position after the end."
                                             pos)))))
            ;; next 11 bits - number of sub-packets 
            (1
-            ;; (format t "~v@{~a~:*~}" 11 "L")
+            (info "~v@{~a~:*~}" 11 "L")
             (let ((total-count (bin (subseq bits (+ start 7) (+ start 7 11)))))
               (loop with pos = (+ start 7 11)
                     repeat total-count
@@ -100,7 +92,26 @@ and position after the end."
           (loop for sub in (op-subpackets packet)
                 sum (sum-versions sub))))))
 
+(defun bool-to-int (b)
+  (if b 1 0))
+
+(defun evaluate (packet)
+  (if (literal-p packet)
+      (literal-value packet)
+      (let ((args (mapcar #'evaluate (op-subpackets packet))))
+        (ecase (op-type packet)
+          (0 (apply #'+ args))
+          (1 (apply #'* args))
+          (2 (apply #'min args))
+          (3 (apply #'max args))
+          (5 (bool-to-int (apply #'> args)))
+          (6 (bool-to-int (apply #'< args)))
+          (7 (bool-to-int (apply #'= args)))))))
+
 (defun part1 (path)
-  (let* ((line (uiop:read-file-line path))
-         (packet (read-packet (to-binary line))))
-    (sum-versions packet)))
+  (let ((+debug+ nil))
+    (sum-versions (read-packet (to-binary (uiop:read-file-line path))))))
+
+(defun part2 (path)
+  (let ((+debug+ nil))
+    (evaluate (read-packet (to-binary (uiop:read-file-line path))))))
