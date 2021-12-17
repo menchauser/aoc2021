@@ -58,7 +58,7 @@ target area: (X1 X2 Y1 Y2)."
         ;;  vx^2 + vx - 2 * x1 >= 0
         with start-vx = (ceiling (/ (- (sqrt (+ 1 (* 8 x1))) 1) 2))
         for vx from start-vx to x2
-        do (loop for vy from y1 to 1000 ;; empirically choose possible max y
+        do (loop for vy from y1 to 500 ;; empirically choose possible max y
                  for (status x y top-y) = (launch-probe vx vy target)
                  do (ecase status
                       (hit
