@@ -48,30 +48,28 @@ target area: (X1 X2 Y1 Y2)."
         when (> x x2)
           return (list 'overshoot x y)))
 
-(defun find-highest-y (target)
+(defun find-solution (target)
   (loop with max-y = 0
-        with x1 = (car target) and x2 = (cadr target)
+        with total-hits = 0
+        with x1 = (car target) and x2 = (cadr target) and y1 = (caddr target)
         ;; actually starting x should be such as we don't undershoot 
         ;; for that we need to find min length of arithmetic progression of VXs.
         ;; one way to find it is use positive root of quadratic inequality:
         ;;  vx^2 + vx - 2 * x1 >= 0
         with start-vx = (ceiling (/ (- (sqrt (+ 1 (* 8 x1))) 1) 2))
         for vx from start-vx to x2
-        do (loop for vy from 1 to 1000 ;; empirically choose possible max y
-                 for (status x y top-y) = (progn
-                                            (info "probe: vx=~a, vy=~a -> " vx vy)
-                                            (launch-probe vx vy target))
+        do (loop for vy from y1 to 1000 ;; empirically choose possible max y
+                 for (status x y top-y) = (launch-probe vx vy target)
                  do (ecase status
                       (hit
-                       (info "hit!~%")
+                       (info "hit: ~a, ~a~%" vx vy)
+                       (incf total-hits)
                        (setf max-y (max max-y top-y)))
                       (overshoot
-                       (info "overshoot~%")
                        (return))
-                      (undershoot
-                       (info "undershoot~%"))))
-        finally (return max-y)))
+                      (undershoot)))
+        finally (return (values max-y total-hits))))
   
-(defun part1 (path)
+(defun solution (path)
   (let ((+debug+ nil))
-    (find-highest-y (read-input path))))
+    (find-solution (read-input path))))
