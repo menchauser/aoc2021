@@ -91,7 +91,7 @@ of of (number . level). Example:
 (defun add (ans bns)
   "Adds and reduces two snail numbers in flat presentation."
   ;; to add two number we concat them and increment their levels
-  (let ((result (append ans bns)))
+  (let ((result (append (copy-alist ans) (copy-alist bns))))
     (dolist (n result)
       (incf (cdr n)))
     ;;(format t "raw add result: ~a~%" result)
@@ -109,7 +109,7 @@ of of (number . level). Example:
         while (not (null nums))
         do (push (car nums) stack)
            (setf nums (cdr nums))
-           (format t "~a~%" stack)
+           ;;(format t "~a~%" stack)
            (loop for (y x) = stack
                  ;; if we got numbers on same level: replace them with mag-sum
                  while (and y x
@@ -117,7 +117,7 @@ of of (number . level). Example:
                             (= (cdr y) (cdr x)))
                  do (setf stack (cddr stack))
                     (push (pair-mag x y) stack))
-        finally (return stack))) 
+        finally (return (caar stack))))
 
 (defun unflatten-number (ns)
   ;; to unflatten on each step we find 
@@ -141,3 +141,10 @@ of of (number . level). Example:
   (let* ((lines (uiop:read-file-lines path))
          (nums (mapcar #'read-flat lines)))
     (magnitude (reduce #'add nums))))
+
+(defun part2 (path)
+  (let* ((lines (uiop:read-file-lines path))
+         (nums (mapcar #'read-flat lines)))
+    (loop for n1 in nums maximize
+      (loop for n2 in (remove n1 nums :test #'equal)
+            maximize (magnitude (add n1 n2))))))
