@@ -71,13 +71,13 @@ of of (number . level). Example:
     ;; first try to explode until we can
     (loop for next-rs = (run-explode rs)
           while next-rs
-          do (format t "ran explode: ~a~%" next-rs)
+          do ;;(format t "ran explode: ~a~%" next-rs)
              (setf rs next-rs
                    ran t))
     ;; if no explode possible: try running split and repeat reduce
     (let ((next-rs (run-split rs)))
       (when next-rs
-        (format t "ran split: ~a~%" next-rs)
+        ;;(format t "ran split: ~a~%" next-rs)
         (setf rs next-rs
               ran t)))
     (if ran
@@ -94,7 +94,7 @@ of of (number . level). Example:
   (let ((result (append ans bns)))
     (dolist (n result)
       (incf (cdr n)))
-    (format t "raw add result: ~a~%" result)
+    ;;(format t "raw add result: ~a~%" result)
     (run-reduce-number result)))
 
 (defun pair-mag (a b)
@@ -103,26 +103,21 @@ of of (number . level). Example:
    (1- (cdr a))))
 
 (defun magnitude (ns)
-  ;; (let ((rs (copy-alist ns)))
-  (format t "next ns: ~a~%" ns)
-  ;; (read-line)
-  (cond
-    ((null ns) 0)
-    ((= 1 (length ns)) ns)
-    (t
-     (let ((left (car ns))
-           (right (cadr ns)))
-       ;; pair found
-       (if (= (cdr left) (cdr right))
-           (progn
-             (format t "found pair: ~a, ~a~%" left right)
-             (setf (car ns) (pair-mag left right)
-                   ns (remove right ns :test #'equal :count 1)))
-           ;; else: we skip to remaining parts
-           (progn
-             (format t "unequal levels: ~a, ~a~%" left right)
-             (setf (cdr ns) (magnitude (cdr ns)))))
-       (magnitude ns)))))
+  ;; let us push each number to stack
+  ;; and then check if they are on same level
+  (loop with nums = ns and stack = nil
+        while (not (null nums))
+        do (push (car nums) stack)
+           (setf nums (cdr nums))
+           (format t "~a~%" stack)
+           (loop for (y x) = stack
+                 ;; if we got numbers on same level: replace them with mag-sum
+                 while (and y x
+                            (> (cdr y) 0)
+                            (= (cdr y) (cdr x)))
+                 do (setf stack (cddr stack))
+                    (push (pair-mag x y) stack))
+        finally (return stack))) 
 
 (defun unflatten-number (ns)
   ;; to unflatten on each step we find 
@@ -145,4 +140,4 @@ of of (number . level). Example:
 (defun part1 (path)
   (let* ((lines (uiop:read-file-lines path))
          (nums (mapcar #'read-flat lines)))
-    (reduce #'add nums)))
+    (magnitude (reduce #'add nums))))
