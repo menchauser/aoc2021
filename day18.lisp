@@ -118,25 +118,7 @@ of of (number . level). Example:
                  do (setf stack (cddr stack))
                     (push (pair-mag x y) stack))
         finally (return (caar stack))))
-
-(defun unflatten-number (ns)
-  ;; to unflatten on each step we find 
-  (loop with result = nil and curr-level = 0 and left = nil
-        for n in ns
-        for delta = (- (cdr n) curr-level)
-        do (format t "process: ~a~%" n)
-        when (> delta 0)
-          do (loop repeat delta do (push #\( result))
-             (push #\# result)
-             (setf curr-level (cdr n))
-        when (< delta 0)
-          do (loop repeat (abs delta) do (push #\) result))
-             (setf curr-level (cdr n))
-        when (= delta 0)
-          do (push #\. result)
-             (push #\# result)
-        finally (return (coerce (reverse result) 'string))))
-           
+          
 (defun part1 (path)
   (let* ((lines (uiop:read-file-lines path))
          (nums (mapcar #'read-flat lines)))
