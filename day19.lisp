@@ -11,7 +11,7 @@
              (loop with result = nil
                    for line = (read-line in nil)
                    while (> (length line) 0)
-                   when (not (char= (char line 0) #\-))
+                   when (not (char= (char line 4) #\s))
                      do (let ((sep1 (position #\, line :test #'char=))
                               (sep2 (position #\, line :test #'char= :from-end t)))
                           (push
@@ -199,51 +199,46 @@ REP-2. Coordinate system is shifted between two reports."
            (offset (report dx dy dz)
              (loop for (x y z) in report
                    collect (list (+ x dx) (+ y dy) (+ z dz)))))
-    ;; we find borders of both report coordinates, calculate min and max shift
-    ;; for rep-2 coordinates across rep-1
-    (let* ((borders-1 (borders rep-1))
-           (borders-2 (borders rep-2))
-           (min-1 (car borders-1))
-           (min-2 (car borders-2))
-           (max-1 (cadr borders-1))
-           (max-2 (cadr borders-2))
-           ;; (n (info "minmax: ~a ~a ~a ~a~%" min-1 max-1 min-2 max-2))
-           (dx-start (- (car min-1) (car max-2)))
-           (dx-end (- (car max-1) (car min-2)))
-           (dy-start (- (cadr min-1) (cadr max-2)))
-           (dy-end (- (cadr max-1) (cadr min-2)))
-           (dz-start (- (caddr min-1) (caddr max-2)))
-           (dz-end (- (caddr max-1) (caddr min-2))))
-      (info "borders 1: ~a~%" borders-1)
-      (info "borders 2: ~a~%" borders-2)
-      (info "dx: ~a..~a~%" dx-start dx-end)
-      (info "dy: ~a..~a~%" dy-start dy-end)
-      (info "dz: ~a..~a~%" dz-start dz-end)
-      ;; to start we shift rep-2's top-right corner to rep-1's bottom-left
-      ;; corner and finish by putting rep-2's bottom-left corner to rep-1's
-      ;; top-right corner. we move rows up and right.
-      (loop named outer for dx from dx-start to dx-end
-            with counter = 0
-            do (info "Next dx: ~a, total count: ~a~%" dx counter)
-               (loop for dy from dy-start to dy-end
-                     do (info "Next dy: ~a, total count: ~a~%" dy counter)
-                        (loop for dz from dz-start to dz-end
-                              for shifted-rep-2 = (offset rep-2 dx dy dz)
-                              do (incf counter)
-                                 (when (= (length
-                                           (set-intersection rep-1 shifted-rep-2))
-                                           total)
-                                   (return-from outer shifted-rep-2))))
-      ))))
+    ;; we take one random point of rep-2 and put it in place of rep-1 points
+    (loop named outer
+          with counter = 0
+          for p1 in rep-1 do
+            (loop for p2 in rep-2
+                  for dx = (- (car p1) (car p2))
+                  for dy = (- (cadr p1) (cadr p2))
+                  for dz = (- (caddr p1) (caddr p2))
+                  for shifted-rep-2 = (offset rep-2 dx dy dz)
+                  for overlaps = (set-intersection rep-1 shifted-rep-2)
+                  do ;; (incf counter)
+                     ;; (info "Next dx=~a, dy=~a, dz=~a, count=~a~%"
+                     ;;       dx dy dz counter)
+                     (when (= (length overlaps) total)
+                       (return-from outer overlaps))
+          ))))
 
- 
-(defun rot-overlaps-3d (rep-1 rep-2 total)
+(defun rot-overlaps3d (rep-1 rep-2 total)
   "Check if TOTAL points in REP-1 and REP-2 reports overlap considering move and
 rotation."
   ;; check all rep-2 rotations for overlap with rep-1
   (loop for rot-rep-2 in (rep-rotations3d rep-2)
         for found-overlap = (progn
-                              (info "rotation: ~a~%" rot-rep-2)
-                              (overlaps2d rep-1 rot-rep-2 total))
+                              ;; (info "rotation: ~a~%" rot-rep-2)
+                              (overlaps3d rep-1 rot-rep-2 total))
         when found-overlap
-          return found-overlap))
+          do (return found-overlap)))
+
+(defun part1 (path)
+  (let ((reports (read-input path)))
+    (loop with all-beacons = (car reports)
+          while reports
+          for rep-1 = (pop reports)
+          for matched = (loop for rep-2 in reports
+                              for overlapped = (rot-overlaps3d rep-1 rep-2 12)
+                              when overlapped
+                                return overlapped)
+          when matched
+            do (setf all-beacons (append all-beacons matched))
+               (setf matched (remove-duplicates matched :test #'equal))
+          finally (format t "Beacons: ~a~%" all-beacons)
+                  (format t "Total count: ~a~%" (length all-beacons))
+                  (length all-beacons))))
