@@ -31,7 +31,7 @@
 
 (defun set-intersection (list-1 list-2)
   (loop for x in list-1
-        when (member x list-2 :test #'equal)
+        when (member x list-2 :test #'equalp)
           collect x))
 
 ;; counter-clockwise: pi/2, pi, 3pi/2
@@ -160,17 +160,6 @@ rotation."
         when found-overlap
           return found-overlap))
 
-(defun rot-overlaps-2d (rep-1 rep-2 total)
-  "Check if TOTAL points in REP-1 and REP-2 reports overlap considering move and
-rotation."
-  ;; check all rep-2 rotations for overlap with rep-1
-  (loop for rot-rep-2 in (rep-rotations2d rep-2)
-        for found-overlap = (progn
-                              (info "rotation: ~a~%" rot-rep-2)
-                              (overlaps2d rep-1 rot-rep-2 total))
-        when found-overlap
-          return found-overlap))
-  
 ;; so what do we do for part one?
 ;; we take one scanner and find a pair with intersected 12 beacons among others
 
@@ -184,26 +173,14 @@ REP-2. Coordinate system is shifted between two reports."
   ;; we start by setting top-right corner of rep2 to bottom-left corner of rep1
   ;; and then we move rep2 right and up, row by row
   ;; find coordinates of rep1's bottom-left corner 
-  (labels ((borders (report)
-             (info "borders: ~a~%" report)
-             (loop for (x y z) in report
-                   minimize x into min-x 
-                   minimize y into min-y
-                   minimize z into min-z
-                   maximize x into max-x
-                   maximize y into max-y
-                   maximize z into max-z
-                   finally (return (list
-                                    (list min-x min-y min-z)
-                                    (list max-x max-y max-z)))))
-           (offset (report dx dy dz)
+  (labels ((offset (report dx dy dz)
              (loop for (x y z) in report
                    collect (list (+ x dx) (+ y dy) (+ z dz)))))
     ;; we take one random point of rep-2 and put it in place of rep-1 points
     (loop named outer
           with counter = 0
-          for p1 in rep-1 do
-            (loop for p2 in rep-2
+          for p2 in rep-2 do
+            (loop for p1 in rep-1
                   for dx = (- (car p1) (car p2))
                   for dy = (- (cadr p1) (cadr p2))
                   for dz = (- (caddr p1) (caddr p2))
@@ -212,8 +189,8 @@ REP-2. Coordinate system is shifted between two reports."
                   do ;; (incf counter)
                      ;; (info "Next dx=~a, dy=~a, dz=~a, count=~a~%"
                      ;;       dx dy dz counter)
-                     (when (= (length overlaps) total)
-                       (return-from outer overlaps))
+                     (when (>= (length overlaps) total)
+                       (return-from outer shifted-rep-2))
           ))))
 
 (defun rot-overlaps3d (rep-1 rep-2 total)
@@ -226,19 +203,23 @@ rotation."
                               (overlaps3d rep-1 rot-rep-2 total))
         when found-overlap
           do (return found-overlap)))
-
+    
 (defun part1 (path)
   (let ((reports (read-input path)))
     (loop with all-beacons = (car reports)
           while reports
-          for rep-1 = (pop reports)
-          for matched = (loop for rep-2 in reports
-                              for overlapped = (rot-overlaps3d rep-1 rep-2 12)
-                              when overlapped
-                                return overlapped)
-          when matched
-            do (setf all-beacons (append all-beacons matched))
-               (setf matched (remove-duplicates matched :test #'equal))
-          finally (format t "Beacons: ~a~%" all-beacons)
+          for matched = (loop initially (info "remaining reports: ~a~%"
+                                              (length reports))
+                              for rep-2 in reports
+                              for found = (rot-overlaps3d all-beacons rep-2 12)
+                              when found
+                                do (setf reports
+                                         (remove rep-2 reports :test #'equalp))
+                                   (return found))
+          do (setf all-beacons
+                   (remove-duplicates (append all-beacons matched)
+                                      :test #'equalp))
+          finally (setf all-beacons (sort all-beacons #'< :key #'car))
+                  (format t "Beacons: ~{~{~a~^,~}~%~}" all-beacons)
                   (format t "Total count: ~a~%" (length all-beacons))
                   (length all-beacons))))
