@@ -28,7 +28,6 @@
             do (push next-scanner full-report)
             finally (return (nreverse full-report))))))
 
-
 (defun set-intersection (list-1 list-2)
   (loop for x in list-1
         when (member x list-2 :test #'equalp)
@@ -190,7 +189,9 @@ REP-2. Coordinate system is shifted between two reports."
                      ;; (info "Next dx=~a, dy=~a, dz=~a, count=~a~%"
                      ;;       dx dy dz counter)
                      (when (>= (length overlaps) total)
-                       (return-from outer shifted-rep-2))
+                       (return-from outer
+                         (values shifted-rep-2
+                                 (list dx dy dz))))
           ))))
 
 (defun rot-overlaps3d (rep-1 rep-2 total)
@@ -198,28 +199,41 @@ REP-2. Coordinate system is shifted between two reports."
 rotation."
   ;; check all rep-2 rotations for overlap with rep-1
   (loop for rot-rep-2 in (rep-rotations3d rep-2)
-        for found-overlap = (progn
-                              ;; (info "rotation: ~a~%" rot-rep-2)
-                              (overlaps3d rep-1 rot-rep-2 total))
-        when found-overlap
-          do (return found-overlap)))
-    
+        for (overlap delta) = (multiple-value-list
+                               (overlaps3d rep-1 rot-rep-2 total))
+        when overlap
+          do (return (values overlap delta))))
+
+(defun max-distance (scanners)
+  (labels ((distance (s1 s2)
+             (reduce #'+ (mapcar #'- s1 s2) :key #'abs)))
+    (loop for s1 in scanners
+          maximize (loop for s2 in (remove s1 scanners :test #'equalp)
+                         maximize (distance s1 s2)))))
+
 (defun part1 (path)
   (let ((reports (read-input path)))
     (loop with all-beacons = (car reports)
+          with all-scanners = (list (list 0 0 0))
+          with reports = (cdr reports)
           while reports
-          for matched = (loop initially (info "remaining reports: ~a~%"
+          for (found delta) = (loop initially (info "remaining reports: ~a~%"
                                               (length reports))
-                              for rep-2 in reports
-                              for found = (rot-overlaps3d all-beacons rep-2 12)
-                              when found
-                                do (setf reports
-                                         (remove rep-2 reports :test #'equalp))
-                                   (return found))
+                                    for rep-2 in reports
+                                    for (found delta) = (multiple-value-list
+                                                         (rot-overlaps3d all-beacons rep-2 12))
+                                    when found
+                                      do (setf reports
+                                               (remove rep-2 reports :test #'equalp))
+                                         (return (list found delta)))
           do (setf all-beacons
-                   (remove-duplicates (append all-beacons matched)
-                                      :test #'equalp))
+                   (remove-duplicates (append all-beacons found)
+                                      :test #'equalp)
+                   all-scanners (cons delta all-scanners))
           finally (setf all-beacons (sort all-beacons #'< :key #'car))
-                  (format t "Beacons: ~{~{~a~^,~}~%~}" all-beacons)
+                  (format t "Beacons:~%~{~{~a~^,~}~%~}" all-beacons)
+                  (format t "Scanners:~%~{~{~s~^,~}~%~}" all-scanners)
+                  ;; (format t "Scanners:~%~{~s~%~}" all-scanners)
                   (format t "Total count: ~a~%" (length all-beacons))
+                  (format t "Max distance: ~a~%" (max-distance all-scanners))
                   (length all-beacons))))
