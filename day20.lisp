@@ -102,20 +102,23 @@ value for infinity plane."
     ;; (print-image enhanced-image)
     (shrink enhanced-image)))
 
-(defun part1 (path)
+(defun solution (path steps)
   (let* ((input (read-input path))
          (image (cdr input))
          (algorithm (car input))
-         (fills (if (= 1 (bit algorithm 0))
-                    '(0 1)
-                    '(0 0)))
          (enhanced image))
-    (dolist (fill fills)
-      (setf enhanced (enhance enhanced algorithm fill)))
+    (loop with switch-fill = (= 1 (bit algorithm 0))
+          with fill = 0
+          repeat steps
+          do (setf enhanced (enhance enhanced algorithm fill))
+          when switch-fill
+            do (setf fill (- 1 fill)))
+    ;; count light pixels
     (loop
       with result = 0
       for i from 0 below (array-dimension enhanced 0) do
         (loop for j from 0 below (array-dimension enhanced 1) 
               when (> (aref enhanced i j) 0)
                 do (incf result))
-      finally (format t "Final light pixels: ~a~%" result))))
+      finally
+         (format t "Final light pixels: ~a~%" result))))
