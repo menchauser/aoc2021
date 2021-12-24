@@ -41,6 +41,8 @@
                        score-1 score-2 pos-1 pos-2 total-rolls)
                (return (* score-1 total-rolls))))))
 
+;; Part 2
+
 (defun zeros (n)
   (loop for i from 1 to n collect 0))
 
@@ -48,30 +50,25 @@
   positions   ;; list of player positions
   scores      ;; list of player scores
   ;; player numbers start from 0
-  next-player
   won-player)
 
 (defun new-universe (pos-1 pos-2) 
   (make-universe :positions (list pos-1 pos-2)
-                 :scores (list 0 0)
-                 :next-player 0))
+                 :scores (list 0 0)))
 
-(defun step-universe (u step &optional (won-threshold 21))
+(defun step-universe (player u step &optional (won-threshold 21))
   (when (numberp (universe-won-player u))
     (error "Can not make step in won universe: ~a~%" u))
-  (let* ((player (universe-next-player u))
-         (pos (nth player (universe-positions u)))
+  (let* ((pos (nth player (universe-positions u)))
          (score (nth player (universe-scores u)))
          (new-pos (move pos step))
          (new-score (+ score new-pos))
-         (next-player (- 1 player))
          (new-positions (copy-list (universe-positions u)))
          (new-scores (copy-list (universe-scores u))))
     (setf (nth player new-positions) new-pos)
     (setf (nth player new-scores) new-score)
     (make-universe :positions new-positions
                    :scores new-scores
-                   :next-player next-player
                    :won-player
                    (position-if (lambda (x) (>= x won-threshold)) new-scores))))
 
@@ -87,45 +84,45 @@
 
 ;; every time we throw: we generate 27 universes (with 7 really different
 ;; outcomes)
-(defun roll (u count)
+(defun roll (player u count)
   (mapcar
    (lambda (outcome)
-     (cons (step-universe u (car outcome)) (* count (cdr outcome))))
+     (cons (step-universe player u (car outcome)) (* count (cdr outcome))))
    +roll-outcomes+))
 
-  
-;; let's think about algo in general
-;; we loop. for each step we first generate universes after 1st player rolled.
-;; that will generate 27 new universes and only 7 different outcomes.
+(defparameter +hash-size+ 10000)
+
 (defun play-dirac (positions)
-  (let* ((init-universe (make-universe :positions positions
-                                       :scores (zeros (length positions))
-                                       :next-player 1))
-         (unis (list (cons init-universe 1))))
+  (let* ((init-uni (make-universe :positions positions
+                                  :scores (zeros (length positions))))
+         (next-player 0)
+         (unis (make-hash-table :test #'equalp :size +hash-size+))
+         (new-unis (make-hash-table :test #'equalp :size +hash-size+)))
+    (setf (gethash init-uni unis) 1)
     (loop with won-counts = (zeros (length positions))
-          while unis
+          while (> (hash-table-count unis) 0)
           ;; on each step we produce new universes
           ;; from won universe only itself is produced
           ;; from not-yet-won universe - new ones generated
-          do (format t "Current unis: ~a~%" (length unis))
-             (loop for (uni . count) in unis
-                   for won-player = (universe-won-player uni)
-                   if (null won-player)
-                     append (roll uni count) into new-unis
-                   else
-                     do (incf (nth won-player won-counts) count)
+          do (format t "Current unis: ~a~%" (hash-table-count unis))
+             (loop for uni being the hash-keys in unis using (hash-value count)
+                   ;; for every universe we create new universes
+                   do (loop 
+                        for (new-uni . new-count) in (roll next-player uni count)
+                        for won-player = (universe-won-player new-uni)
+                        do (if (null won-player)
+                               (incf (gethash new-uni new-unis 0) new-count)
+                               (incf (nth won-player won-counts) new-count)))
                    finally
+                      (setf next-player (- 1 next-player))
                       (setf unis new-unis)
-                      (format t "New unis: ~a~%" (length unis))
+                      (setf new-unis (make-hash-table :test #'equalp :size +hash-size+))
+                      (format t "New unis: ~a~%" (hash-table-count unis))
                       (format t "New won counts: ~a~%" won-counts))
           finally
-             (format t "final unis count: ~a~%" (length unis))
+             (format t "final unis count: ~a~%" (hash-table-count unis))
              (format t "Total won: ~a~%" won-counts)
-             (format t "total number: ~a~%"
-                     (loop for (u . c) in unis
-                           sum c))
-             (return unis)
-          )))
+             (format t "Max: ~a~%" (apply #'max won-counts)))))
 
 (defun part1 (path)
   (let* ((lines (uiop:read-file-lines path))
@@ -134,3 +131,11 @@
                        (parse-integer (subseq line (- (length line) 2))))
                      lines)))
     (play-deterministic positions)))
+
+(defun part2 (path)
+  (let* ((lines (uiop:read-file-lines path))
+         (positions (mapcar
+                     (lambda (line)
+                       (parse-integer (subseq line (- (length line) 2))))
+                     lines)))
+    (play-dirac positions)))
